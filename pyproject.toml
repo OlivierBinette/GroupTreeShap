@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools", "wheel", "pybind11"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64"]
+
+[tool.pixi.target.osx.activation]
+scripts=["scripts/osx-env-activation.sh"]
+env = { CPLUS_INCLUDE_PATH = "$SDKROOT/usr/include/c++/v1" }
+
+[tool.pixi.tasks]
+install-jupyter-kernel = "ipython kernel install --user --name=$PIXI_PROJECT_NAME"
+
+[tool.pixi.dependencies]
+python = "3.11.*"
+
+[tool.pixi.pypi-dependencies]
+grouptreeshap = { path = ".", editable = true, extras = ["test", "dev"] }
