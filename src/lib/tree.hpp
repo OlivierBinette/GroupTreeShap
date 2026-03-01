@@ -7,12 +7,11 @@
 
 namespace py = pybind11;
 
-using namespace std;
-
 static constexpr int kFlags = py::array::c_style | py::array::forcecast;
 template <typename T>
 using pyarray = py::array_t<T, kFlags>;
 
+using namespace std;
 
 class Tree {
 public:

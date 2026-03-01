@@ -1,13 +1,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
-#include <vector>
 
-#include "treeshap_xgb.hpp"
+#include "../lib/tree.hpp"
 
-PYBIND11_MODULE(treeshap, m) {
+PYBIND11_MODULE(tree, m) {
 
-    m.attr("__name__") = "grouptreeshap.shap._cpp.treeshap";
+    m.attr("__name__") = "grouptreeshap.tree";
 
     // Bind the Tree class
     py::class_<Tree>(m, "Tree")
@@ -50,11 +49,4 @@ PYBIND11_MODULE(treeshap, m) {
         .def_readwrite("categories", &Tree::categories)
         .def_readwrite("categories_segments", &Tree::categories_segments)
         .def_readwrite("categories_sizes", &Tree::categories_sizes);
-
-    // Bind the tree_shap_xgb function
-    m.def("tree_shap_xgb", &tree_shap_xgb,
-          "XGBoost-like implementation of the TreeSHAP algorithm.",
-          py::arg("tree"), py::arg("x"), py::arg("x_missing"), py::arg("phi"),
-          py::arg("condition"), py::arg("condition_feature"),
-          py::arg("feature_reprs"));
 }

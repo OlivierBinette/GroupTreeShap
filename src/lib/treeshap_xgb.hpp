@@ -260,7 +260,7 @@ void TreeShap(const Tree &tree, const py::array_t<double> &x,
   }
 }
 
-void tree_shap_xgb(const Tree &tree, const py::array_t<double> &x,
+void treeshap_xgb(const Tree &tree, const py::array_t<double> &x,
                    const py::array_t<bool> &x_missing, py::array_t<float> &phi, int condition,
                    uint32_t condition_feature, const vector<uint32_t> &feature_reprs)
 {

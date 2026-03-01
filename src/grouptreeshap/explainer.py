@@ -1,12 +1,9 @@
-from abc import ABC, abstractmethod
-from grouptreeshap.shap._cpp.treeshap import Tree as CppTree, tree_shap_xgb
-
 import numpy as np
 
+from grouptreeshap.treeshap import treeshap_xgb
 from grouptreeshap.tree_ensemble import TreeEnsemble
 
-
-class Explainer(ABC):
+class GroupedTreeExplainer:
     def __init__(self, model: any) -> None:
         if isinstance(model, TreeEnsemble):
             self.tree_ensemble = model
@@ -16,12 +13,7 @@ class Explainer(ABC):
             self.tree_ensemble = TreeEnsemble.from_xgboost(model)
         else:
             raise RuntimeError(f"Unsupported model: {model}")
-        
-    @abstractmethod
-    def shap_values(self, x: list[float], **kwargs) -> list[float]: ...
 
-
-class GroupedTreeExplainer(Explainer):
     def shap_values(
         self,
         x: list[float],
@@ -34,29 +26,11 @@ class GroupedTreeExplainer(Explainer):
         if x_missing is None:
             x_missing = np.isnan(x)
 
-        cpp_trees = [
-            CppTree(
-                tree.feature,
-                tree.children_left,
-                tree.children_right,
-                tree.missing_go_to_left,
-                tree.threshold,
-                tree.value,
-                tree.weighted_n_node_samples,
-                tree.split_type,
-                tree.categories_nodes,
-                tree.categories,
-                tree.categories_segments,
-                tree.categories_sizes,
-            )
-            for tree in self.tree_ensemble.trees
-        ]
-
         phi = np.zeros(len(x), dtype=np.float32)
         this_tree_contribs = np.zeros(len(x), dtype=np.float32)
-        for tree in cpp_trees:
+        for tree in self.tree_ensemble.trees:
             this_tree_contribs *= 0
-            tree_shap_xgb(tree, x, x_missing, this_tree_contribs, 0, feature_reprs[0], feature_reprs=feature_reprs)
+            treeshap_xgb(tree, x, x_missing, this_tree_contribs, 0, feature_reprs[0], feature_reprs=feature_reprs)
             phi += this_tree_contribs
 
         return phi

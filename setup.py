@@ -3,7 +3,8 @@ from pybind11.setup_helpers import build_ext, intree_extensions
 
 ext_modules = intree_extensions(
     [
-        "src/grouptreeshap/shap/_cpp/treeshap.cpp",
+        "src/grouptreeshap/tree.cpp",
+        "src/grouptreeshap/treeshap.cpp",
     ]
 )
 
@@ -15,7 +16,7 @@ setup(
     author_email="olivier.binette@upstart.com",
     url="https://github.com/OlivierBinette-Upstart/TreeTools",
     include_package_data=True,
-    packages=find_packages(where="src"),
+    packages=find_packages(where="src", include="grouptreeshap*"),
     package_dir={"": "src"},
     install_requires=[
         "numpy>=2",
