@@ -12,15 +12,15 @@ ubjson_examples = [
     (b'F', False),
 
     # int8
-    (b'i\x2a', 42),     # 42
-    (b'i\xfb', -5),     # -5
+    (b'i\x2a', 42),
+    (b'i\xfb', -5),
 
     # uint8
-    (b'U\xc8', 200),    # 200
+    (b'U\xc8', 200),
 
     # int16
-    (b'I\x03\xe8', 1000),   # 1000
-    (b'I\xfc\x18', -1000),  # -1000
+    (b'I\x03\xe8', 1000),
+    (b'I\xfc\x18', -1000),
 
     # int32
     (b'l\x00\x01\x86\xa0', 100000),
@@ -32,7 +32,7 @@ ubjson_examples = [
     (b'd\x3f\xc0\x00\x00', 1.5),
 
     # float64
-    #(b'D\x3f\xf8\x00\x00\x00\x00\x00\x00', 1.5),
+    (b'D\x3f\xf8\x00\x00\x00\x00\x00\x00', 1.5),
 
     # char
     (b'Ca', "a"),
@@ -67,7 +67,7 @@ ubjson_examples = [
     # [ [#][i][3]  [i][1] [i][2] [i][3] ]
     (b'[#i\x03i\x01i\x02i\x03', [1, 2, 3]),
 
-    # Optimized with type + count: float32 array [1.0, 2.0, 1.5]
+    # Optimized with type + count: float32 array
     # [ [$][d][#][i][3]  [1.0] [2.0] [1.5]
     (
         b'[$d#i\x03'
@@ -93,13 +93,16 @@ ubjson_examples = [
         [[1, 2], [3, 4]]
     ),
 
-    # Strongly typed special-case arrays MUST have empty body:
+    # Special cases with empty body optimization:
 
-    # 3 nulls: [ [$][Z][#][i][3] ]
+    # 3 None: [ [$][Z][#][i][3] ]
     (b'[$Z#i\x03', [None, None, None]),
 
-    # 5 trues: [ [$][T][#][i][5] ]
-    (b'[$T#i\x05', [True, True, True, True, True]),
+    # 5 True: [ [$][T][#][i][5] ]
+    (b'[$T#i\x05', [True]*5),
+    
+    # 5 False: [ [$][T][#][i][5] ]
+    (b'[$F#i\x05', [False]*5),
 ]
 
 @pytest.mark.parametrize("ubj,expected", ubjson_examples)
