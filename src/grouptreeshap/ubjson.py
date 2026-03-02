@@ -6,6 +6,9 @@ from typing import Union, BinaryIO, Optional
 class UBJSONDecodeError(Exception):
     pass
 
+class UBJSONUnsupportedError(UBJSONDecodeError):
+    pass
+
 
 class UBJSONDecoder:
     def __init__(self, byte_stream: Union[bytes, BinaryIO]):
