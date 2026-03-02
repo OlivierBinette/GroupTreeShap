@@ -153,8 +153,7 @@ void TreeShap(const Tree &tree, const py::array_t<double> &x,
     }
     const int split_index_repr = feature_reprs[split_index];
 
-    // leaf node
-    if (tree.children_right.at(nidx) < 0)
+    if (tree.children_right.at(nidx) < 0) // leaf node
     {
         for (int i = 1; i <= unique_depth; ++i)
         {
@@ -163,9 +162,8 @@ void TreeShap(const Tree &tree, const py::array_t<double> &x,
             phi.mutable_at(el.feature_index) +=
                 w * (el.one_fraction - el.zero_fraction) * static_cast<float>(tree.value.at(nidx)) * condition_fraction;
         }
-        // internal node
     }
-    else
+    else // internal node
     {
         // find which branch is "hot" (meaning x would follow it)
         int cleft = tree.children_left.at(nidx);
