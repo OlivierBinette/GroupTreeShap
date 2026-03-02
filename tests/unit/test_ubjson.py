@@ -85,6 +85,14 @@ ubjson_examples = [
         [[1, 2], [3, 4]]
     ),
 
+    # Strongly typed nested arrays - fully optimized
+    (
+        b'[$[$i#i\x02#i\x02'
+            b'\x01\x02'
+            b'\x03\x04',
+        [[1, 2], [3, 4]]
+    ),
+
     # Strongly typed special-case arrays MUST have empty body:
 
     # 3 nulls: [ [$][Z][#][i][3] ]
