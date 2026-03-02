@@ -108,3 +108,14 @@ ubjson_examples = [
 @pytest.mark.parametrize("ubj,expected", ubjson_examples)
 def test_decode_examples(ubj, expected):
     assert UBJSONDecoder(ubj).decode() == expected
+
+    # Test decode is as expected when no-ops are added
+    assert UBJSONDecoder(b'N' + ubj + b'N').decode() == expected
+
+    # Test decode is as expected when part of a list
+    inlist = b'[i\x01' + ubj + b'i\x02]'
+    assert UBJSONDecoder(inlist).decode() == [1, expected, 2]
+
+    # Test decode is as expected when part of a dict
+    indict = b'{i\x07content' + ubj + b'i\x05afterZ}'
+    assert UBJSONDecoder(indict).decode() == {"content": expected, "after": None}
