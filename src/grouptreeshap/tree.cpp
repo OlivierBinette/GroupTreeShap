@@ -4,11 +4,12 @@
 
 #include "../lib/tree.hpp"
 
+using namespace grouptreeshap;
+
 PYBIND11_MODULE(tree, m) {
 
     m.attr("__name__") = "grouptreeshap.tree";
 
-    // Bind the Tree class
     py::class_<Tree>(m, "Tree")
         .def(py::init<
             py::array_t<int>,       // feature
