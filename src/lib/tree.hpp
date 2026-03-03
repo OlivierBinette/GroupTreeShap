@@ -28,7 +28,7 @@ public:
     pyarray<double> threshold;
     pyarray<double> value;
     pyarray<double> weighted_n_node_samples;
-    pyarray<int> split_type;
+    pyarray<int> split_type;    // 0 for numerical split, 1 for categorical split.
     pyarray<int> categories_nodes;
     pyarray<int> categories;
     pyarray<int> categories_segments;
@@ -115,7 +115,7 @@ public:
         }
     }
 
-    int get_next_node(int start_node, const py::array_t<double> &x, const py::array_t<bool> &x_missing) const
+    int get_next_node(int start_node, const py::array_t<double> &x) const
     {
 
         int split_index = feature.at(start_node);
@@ -131,16 +131,10 @@ public:
             return start_node;
         }
 
-        if (x_missing.at(split_index))
+        if (isnan(x.at(split_index)))
         {
-            if (missing_go_to_left.at(start_node))
-            {
-                return cleft;
-            }
-            else
-            {
-                return cright;
-            }
+            if (missing_go_to_left.at(start_node)) return cleft;
+            else return cright;
         }
         else
         {
@@ -191,7 +185,8 @@ public:
 
         while (!stack.empty())
         {
-            auto [node, d] = stack.back();
+            int node = stack.back().first;
+            int d = stack.back().second;
             stack.pop_back();
 
             int l = children_left.at(node);

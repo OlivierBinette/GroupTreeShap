@@ -128,7 +128,7 @@ float UnwoundPathSum(const PathElement *unique_path, int unique_depth,
  * \param feature_reprs feature representatives for groupSHAP calculation
  */
 void TreeShap(const Tree &tree, const py::array_t<double> &x,
-              const py::array_t<bool> &x_missing, py::array_t<float> &phi,
+              py::array_t<float> &phi,
               int nidx, int unique_depth, PathElement *parent_unique_path,
               float parent_zero_fraction, float parent_one_fraction, int parent_feature_index,
               int condition, int condition_feature, float condition_fraction, const vector<int> &feature_reprs)
@@ -166,10 +166,10 @@ void TreeShap(const Tree &tree, const py::array_t<double> &x,
     else // internal node
     {
         // find which branch is "hot" (meaning x would follow it)
-        int cleft = tree.children_left.at(nidx);
-        int cright = tree.children_right.at(nidx);
-        int hot_index = tree.get_next_node(nidx, x, x_missing);
-        int cold_index = (hot_index == cleft) ? cright : cleft;
+        const int cleft = tree.children_left.at(nidx);
+        const int cright = tree.children_right.at(nidx);
+        const int hot_index = tree.get_next_node(nidx, x);
+        const int cold_index = (hot_index == cleft) ? cright : cleft;
 
         const float w = static_cast<float>(tree.weighted_n_node_samples.at(nidx));
         const float hot_zero_fraction = static_cast<float>(tree.weighted_n_node_samples.at(hot_index)) / w;
@@ -208,21 +208,21 @@ void TreeShap(const Tree &tree, const py::array_t<double> &x,
             unique_depth -= 1;
         }
 
-        TreeShap(tree, x, x_missing, phi, hot_index, unique_depth + 1, unique_path,
+        TreeShap(tree, x, phi, hot_index, unique_depth + 1, unique_path,
                  hot_zero_fraction * incoming_zero_fraction, incoming_one_fraction, split_index_repr,
                  condition, condition_feature, hot_condition_fraction, feature_reprs);
 
-        TreeShap(tree, x, x_missing, phi, cold_index, unique_depth + 1, unique_path,
+        TreeShap(tree, x, phi, cold_index, unique_depth + 1, unique_path,
                  cold_zero_fraction * incoming_zero_fraction, 0, split_index_repr, condition,
                  condition_feature, cold_condition_fraction, feature_reprs);
     }
 }
 
 void treeshap_xgb(const Tree &tree, const py::array_t<double> &x,
-                  const py::array_t<bool> &x_missing, py::array_t<float> &phi, int condition,
+                py::array_t<float> &phi, int condition,
                   int condition_feature, const vector<int> &feature_reprs)
 {
-    // TODO: properly validate x, x_missing, phi, and feature_reprs given the provided tree.
+    // TODO: properly validate x, phi, and feature_reprs given the provided tree.
     if (phi.ndim() != 1)
     {
         throw runtime_error("phi must be 1-dimensional");
@@ -242,6 +242,6 @@ void treeshap_xgb(const Tree &tree, const py::array_t<double> &x,
     int const maxd = depth + 2;
     vector<PathElement> unique_path_data((maxd * (maxd + 1)) / 2);
 
-    TreeShap(tree, x, x_missing, phi, 0, 0, unique_path_data.data(), 1, 1, -1, condition,
+    TreeShap(tree, x, phi, 0, 0, unique_path_data.data(), 1, 1, -1, condition,
              condition_feature, 1, feature_reprs);
 }
