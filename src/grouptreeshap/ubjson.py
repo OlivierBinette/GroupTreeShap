@@ -6,6 +6,9 @@ from typing import Union, BinaryIO, Optional
 class UBJSONDecodeError(Exception):
     pass
 
+class UBJSONUnsupportedError(UBJSONDecodeError):
+    pass
+
 
 class UBJSONDecoder:
     _JTYPE = Union[None, bytes, tuple[bytes, Union[None, tuple['_JTYPE', int]]]]
