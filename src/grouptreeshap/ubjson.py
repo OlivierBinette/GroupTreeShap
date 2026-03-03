@@ -58,14 +58,14 @@ class UBJSONDecoder:
 
         if parser is not None:
             return parser()
-        elif marker is b'N':
-            raise UBJSONDecodeError(f"Unimplemented marker: {marker}")
+        elif marker == b'N':
+            raise UBJSONUnsupportedError(f"Unimplemented marker: {marker}")
         else:
             raise UBJSONDecodeError(f"Unknown marker: {marker}")
 
     def _decode_string(self) -> str:
         length = self._decode_length()
-        return self._read_exact(length).decode("utf-8")
+        return self._read_exact(length).decode("utf-8") if length > 0 else ""
 
     def _decode_length(self) -> int:
         type_marker = self.fp.read(1)
@@ -94,12 +94,14 @@ class UBJSONDecoder:
         match marker:
             case b'[' | b'{':
                 # grab dollar sign ?
-                if b'$' == dollar_sign := self.fp.read(1):
+                dollar_sign = self.fp.read(1)
+                if b'$' == dollar_sign:
                     ## recurse _parse_type
                     value_type = self._parse_type()
                 #else: ##f edge case - array no type == deepest collection has no type
                 # grab pound sign ?
-                if b'#' == pound_sign := self.fp.read(1):
+                pound_sign = self.fp.read(1)
+                if b'#' == pound_sign:
                     ## call _decode_length
                     count = self._decode_length()
                 else:
