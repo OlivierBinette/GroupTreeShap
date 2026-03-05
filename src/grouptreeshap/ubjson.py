@@ -98,7 +98,9 @@ class UBJSONDecoder:
                 if b'$' == dollar_sign:
                     ## recurse _parse_type
                     value_type = self._parse_type()
-                #else: ##f edge case - array no type == deepest collection has no type
+                else:
+                    ##f edge case - array no type == deepest collection with no type
+                    self.fp.seek(-1, SEEK_CUR)
                 # grab pound sign ?
                 pound_sign = self.fp.read(1)
                 if b'#' == pound_sign:
@@ -109,7 +111,7 @@ class UBJSONDecoder:
                     self.fp.seek(-1, SEEK_CUR)
                     f = lambda x: None if x[0] is None else ((x[0][0], f(x[0][1])), x[0][1][1])
                     try:
-                        return f((marker, (value_type, None)))
+                        return (marker, f((value_type, None)))
                     except:
                         # TypeError or IndexError when input is formatted wrong
                         raise UBJSONDecodeError(f"Typed collection without count, expected b'#' got: {pound_sign}")
