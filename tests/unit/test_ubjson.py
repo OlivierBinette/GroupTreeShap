@@ -1,6 +1,6 @@
 import pytest
 
-from grouptreeshap.ubjson import UBJSONDecoder, UBJSONDecodeError, UBJSONUnsupportedError
+from grouptreeshap.ubjson import UBJSONDecoder, UBJSONDecodeError
 
 invalid_examples = [
     # Multiple values/containers
@@ -256,22 +256,21 @@ def test_decode_examples(ubj, expected):
     indict = b'{i\x07content' + ubj + b'i\x05afterZ}'
     assert UBJSONDecoder(indict).decode() == {"content": expected, "after": None}
 
-#def test_noop_array_type_unsupported():
-#    with pytest.raises(UBJSONUnsupportedError):
-#        UBJSONDecoder(b'[$N#i\x00').decode()  # Array of length 0 of type no-op.
+def test_noop_array_type_unsupported():
+    with pytest.raises(UBJSONDecodeError):
+        UBJSONDecoder(b'[$N#i\x00').decode()  # Array of length 0 of type no-op.
+    with pytest.raises(UBJSONDecodeError):
+        UBJSONDecoder(b'[$N#i\x03').decode()  # Array of length 3 of type no-op.
 
-#    with pytest.raises(UBJSONUnsupportedError):
-#        UBJSONDecoder(b'[$N#i\x03').decode()  # Array of length 3 of type no-op.
+def test_noop_object_type_unsupported():
+    with pytest.raises(UBJSONDecodeError):
+        UBJSONDecoder(b'{$N#i\x00').decode()  # Empty object of type no-op.
 
-#def test_noop_object_type_unsupported():
-#    with pytest.raises(UBJSONUnsupportedError):
-#        UBJSONDecoder(b'{$N#i\x00').decode()  # Empty object of type no-op.
+    with pytest.raises(UBJSONDecodeError):
+        UBJSONDecoder(b'{$N#i\x02i\x05noop1i\x05noop2').decode()  # Object of size 2 of type no-op.
 
-#    with pytest.raises(UBJSONUnsupportedError):
-#        UBJSONDecoder(b'{$N#i\x02i\x05noop1i\x05noop2').decode()  # Object of size 2 of type no-op.
-
-#@pytest.mark.parametrize("ubj", invalid_examples)
-#def test_raise_on_invalid(ubj):
-#    print(ubj)
-#    with pytest.raises(UBJSONDecodeError):
-#        UBJSONDecoder(ubj).decode()
+@pytest.mark.parametrize("ubj", invalid_examples)
+def test_raise_on_invalid(ubj):
+    print(ubj)
+    with pytest.raises(UBJSONDecodeError):
+        UBJSONDecoder(ubj).decode()

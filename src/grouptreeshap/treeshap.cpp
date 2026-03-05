@@ -12,7 +12,7 @@ PYBIND11_MODULE(treeshap, m) {
     m.attr("__name__") = "grouptreeshap.treeshap";
 
     m.def("treeshap_xgb", &treeshap_xgb,
-          "XGBoost-like implementation of the TreeSHAP algorithm.",
+          "XGBoost-like float32 implementation of the TreeSHAP algorithm.",
           py::arg("tree"), py::arg("x"), py::arg("phi"),
           py::arg("condition"), py::arg("condition_feature"),
           py::arg("feature_reprs"));
