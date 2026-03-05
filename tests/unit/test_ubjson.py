@@ -138,6 +138,16 @@ ubjson_examples = [
         [42, 43, 44]
     ),
 
+    # Optimized with type + count: char array
+    # [ [$][C][#][i][3]  [a] [b] [c]
+    (
+        b'[$C#i\x03'
+            b'a'
+            b'b'
+            b'c',
+        ['a', 'b', 'c']
+    ),
+
     # Optimized with type + count: uint8 array
     # [ [$][U][#][i][3]  [200] [201] [202]
     (

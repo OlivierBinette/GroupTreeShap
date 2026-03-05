@@ -1,5 +1,5 @@
 import struct
-from array import array
+#from array import array
 from io import BytesIO, SEEK_CUR
 from typing import Union, BinaryIO, Optional
 
@@ -158,6 +158,8 @@ class UBJSONDecoder:
                 #    temp.byteswap()
                 #items = temp.tolist()
                 items = list(struct.unpack(f">{count}{ctype}", self._read_exact(bytesize*count)))
+            elif jtype == b'C':
+                items = list(self._read_exact(count).decode("utf-8"))
             else:
                 # array body is not known length in bytes
                 for _ in range(count):
