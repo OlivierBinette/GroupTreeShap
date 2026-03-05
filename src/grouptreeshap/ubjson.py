@@ -234,7 +234,7 @@ def read_list(ubj: BytesIO, type_spec = None):
         if type_markers[0] in [b'[', b'{']:
             type_spec = (type_markers[1:], counts[1:])
             for _ in range(counts[0]):
-                if len(counts) == 1:
+                if len(counts) <= 1:
                     type_spec = get_container_type(ubj)
                 container.append(read_container(ubj, type_markers[0], type_spec))
             return container
