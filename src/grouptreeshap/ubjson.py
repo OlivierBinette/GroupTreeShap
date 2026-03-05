@@ -1,4 +1,5 @@
 import struct
+from array import array
 from io import BytesIO, SEEK_CUR
 from typing import Union, BinaryIO, Optional
 
@@ -20,7 +21,10 @@ class UBJSONDecoder:
         self.fp: BinaryIO = byte_stream
 
     def decode(self) -> object:
-        return self._decode_from_type(None)
+        ret = self._decode_from_type(None)
+        if len(end_of_stream := self.fp.read(1)) != 0:
+            raise UBJSONDecodeError("Expected end of stream, got {end_of_stream}")
+        return ret
 
     def _read_exact(self, n: int) -> bytes:
         data = self.fp.read(n)
@@ -145,7 +149,7 @@ class UBJSONDecoder:
                     b'L': ('q', 8),
                     b'd': ('f', 4),
                     b'D': ('d', 8),
-                }.get(value_type, (None, None))
+                }.get(jtype, (None, None))
 
                 if ctype is not None:
                     items = array(ctype, self._read_exact(bytesize*count)).tolist()

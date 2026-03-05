@@ -12,7 +12,6 @@ invalid_examples = [
     b'[TF][FT]',
 
     # Unexpected end of sequence
-    b'N',
     b'[TF',
     b'[[]',
     b'I\x00',
@@ -38,7 +37,6 @@ invalid_examples = [
 ubjson_examples = [
     # Null
     (b'Z', None),
-    (b'NZNN', None),  # parser should ignore N (no-op)
 
     # Booleans
     (b'T', True),
@@ -81,10 +79,6 @@ ubjson_examples = [
     # ------
     # Arrays
     # ------
-
-    # Unoptimized mixed array with no-ops: [null, true, "hi", 42]
-    # [ [Z] [T] [S][i][2][hi] [N] [i][42] [N] ]
-    (b'[ZTSi\x02hiNi\x2aN]', [None, True, "hi", 42]),
 
     # Unoptimized nested array: [[1,2],[3]]
     # [ [ [i][1] [i][2] ] [ [i][3] ] ]
@@ -233,9 +227,6 @@ ubjson_examples = [
 def test_decode_examples(ubj, expected):
     assert UBJSONDecoder(ubj).decode() == expected
 
-    # Test decode is as expected when no-ops are added
-    assert UBJSONDecoder(b'N' + ubj + b'N').decode() == expected
-
     # Test decode is as expected when part of a list
     inlist = b'[i\x01' + ubj + b'i\x02]'
     assert UBJSONDecoder(inlist).decode() == [1, expected, 2]
@@ -244,14 +235,13 @@ def test_decode_examples(ubj, expected):
     indict = b'{i\x07content' + ubj + b'i\x05afterZ}'
     assert UBJSONDecoder(indict).decode() == {"content": expected, "after": None}
 
-def test_noop_array_type_unsupported():
-    with pytest.raises(UBJSONUnsupportedError):
-        UBJSONDecoder(b'[$N#i\x00').decode()  # Array of length 0 of type no-op.
-
     with pytest.raises(UBJSONUnsupportedError):
         UBJSONDecoder(b'[$N#i\x03').decode()  # Array of length 3 of type no-op.
 
 def test_noop_object_type_unsupported():
+    with pytest.raises(UBJSONUnsupportedError):
+        UBJSONDecoder(b'N').decode()  # Singular no-op.
+
     with pytest.raises(UBJSONUnsupportedError):
         UBJSONDecoder(b'{$N#i\x00').decode()  # Empty object of type no-op.
 
