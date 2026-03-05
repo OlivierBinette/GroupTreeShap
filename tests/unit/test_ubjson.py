@@ -128,8 +128,10 @@ ubjson_examples = [
     ),
     (
         b'[$[#i\x02'
-            b'[$i#i\x02\x01\x02'
-            b'[$i#i\x02\x03\x04',
+                b'[$i#i\x02\x01\x02'
+            b']'
+                b'[$i#i\x02\x03\x04'
+            b']',
         [[[1, 2]], [[3, 4]]]
     ),
     (
@@ -235,15 +237,12 @@ def test_decode_examples(ubj, expected):
     indict = b'{i\x07content' + ubj + b'i\x05afterZ}'
     assert UBJSONDecoder(indict).decode() == {"content": expected, "after": None}
 
-    with pytest.raises(UBJSONUnsupportedError):
-        UBJSONDecoder(b'[$N#i\x03').decode()  # Array of length 3 of type no-op.
-
 def test_noop_object_type_unsupported():
     with pytest.raises(UBJSONUnsupportedError):
         UBJSONDecoder(b'N').decode()  # Singular no-op.
 
     with pytest.raises(UBJSONUnsupportedError):
-        UBJSONDecoder(b'{$N#i\x00').decode()  # Empty object of type no-op.
+        UBJSONDecoder(b'[$N#i\x03').decode()  # Array of length 3 of type no-op.
 
     with pytest.raises(UBJSONUnsupportedError):
         UBJSONDecoder(b'{$N#i\x02i\x05noop1i\x05noop2').decode()  # Object of size 2 of type no-op.
