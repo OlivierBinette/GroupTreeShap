@@ -200,16 +200,10 @@ def read_dict_unoptimized(ubj: BytesIO, count: int | None, type_spec: None | tup
 
 def read_dict_optimized(ubj: BytesIO, type_markers: list[bytes], counts: list[int]) -> dict[str, JSONLike]:
     container = dict()
-    if type_markers[0] in SPECIAL_TYPES:
-        for _ in range(counts[0]):
-            key = read_string(ubj)
-            container[key] = read_special(type_markers[0])
-        return container
-    else:
-        for _ in range(counts[0]):
-            key = read_string(ubj)
-            container[key] = read_element(ubj, type_markers[0], (type_markers[1:], counts[1:]))
-        return container
+    for _ in range(counts[0]):
+        key = read_string(ubj)
+        container[key] = read_element(ubj, type_markers[0], (type_markers[1:], counts[1:]))
+    return container
 
 def read_dict(ubj: BytesIO, type_markers: list[bytes], counts: list[int]) -> dict[str, JSONLike]:
     if len(type_markers) == 0:
