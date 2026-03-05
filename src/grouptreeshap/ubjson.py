@@ -1,179 +1,252 @@
 import struct
 from io import BytesIO, SEEK_CUR
 from typing import Union, BinaryIO, Optional
+from array import array
+import json
 
+SPECIAL_TYPES = frozenset({
+    b'Z',
+    b'N',
+    b'T',
+    b'F',
+})
+NUMERIC_TYPES = frozenset({
+    b'i',
+    b'U',
+    b'I',
+    b'l',
+    b'L',
+    b'd',
+    b'D',
+    b'H',
+})
+CONTAINER_TYPES = frozenset({
+    b'[',
+    b'{'
+})
+
+# Mapping of some numeric UBJSON types to C types and their byte size.
+OPTIMIZED_TYPECODES = {
+    b'i': ('b', 1),
+    b'U': ('B', 1),
+    b'I': ('h', 2),
+    b'l': ('l', 4),
+    b'L': ('q', 8),
+    b'd': ('f', 4),
+    b'D': ('d', 8),
+}
 
 class UBJSONDecodeError(Exception):
     pass
 
-class UBJSONUnsupportedError(UBJSONDecodeError):
+class UBJSONUnsupportedError(Exception):
     pass
 
-
 class UBJSONDecoder:
-    _JTYPE = Union[None, bytes, tuple[bytes, Union[None, tuple['_JTYPE', int]]]]
-    def __init__(self, byte_stream: Union[bytes, BinaryIO]):
-        if isinstance(byte_stream, (bytes, bytearray)):
-            byte_stream = BytesIO(byte_stream)
-        elif not hasattr(byte_stream, "read"):
-            raise TypeError("Expected bytes, bytearray, or a binary file-like object")
-        self.fp: BinaryIO = byte_stream
+    def __init__(self, ubj):
+        self.ubj = ubj
 
-    def decode(self) -> object:
-        return self._decode_from_type(None)
+    def decode(self):
+        return decode(self.ubj)
 
-    def _read_exact(self, n: int) -> bytes:
-        data = self.fp.read(n)
-        if len(data) != n:
-            raise UBJSONDecodeError(
-                f"Unexpected end of stream. Expected {n} bytes, got {len(data)}."
-            )
-        return data
+def decode(ubj: bytes | bytearray | BytesIO):
+    if not isinstance(ubj, BytesIO):
+        ubj = BytesIO(ubj)
 
-    def _decode_from_type(self, jtype:_JTYPE) -> object:
-        match jtype:
-            case None: return self._decode_from_type(self._parse_type())
-            case (b'[', array_type): return self._decode_array(array_type)
-            case (b'{', object_type): return self._decode_object(object_type)
+    marker = get_next_marker(ubj)
+    result = read_element(ubj, marker)
+    
+    while (end_marker := ubj.read(1)) == b'N':
+        continue
+    if end_marker != b'':
+        raise UBJSONDecodeError()
+    else:
+        return result
 
-        # treat jtype as marker
-        return self._decode_by_marker(jtype)
+def read_element(ubj: BytesIO, marker):
+    if marker in NUMERIC_TYPES:
+        return read_numeric(ubj, marker)
+    elif marker in SPECIAL_TYPES:
+        return read_special(marker)
+    elif marker in CONTAINER_TYPES:
+        return read_container(ubj, marker)
+    elif marker == b'S':
+        return read_string(ubj, marker)
+    elif marker == b'C':
+        return read_char(ubj, marker)
+    else:
+        raise UBJSONDecodeError()
 
-    def _decode_by_marker(self, marker: bytes) -> object:
-        parser = {
-            b"Z": lambda: None,
-            b"T": lambda: True,
-            b"F": lambda: False,
-            b"i": lambda: struct.unpack(">b", self._read_exact(1))[0],
-            b"U": lambda: struct.unpack(">B", self._read_exact(1))[0],
-            b"I": lambda: struct.unpack(">h", self._read_exact(2))[0],
-            b"l": lambda: struct.unpack(">i", self._read_exact(4))[0],
-            b"L": lambda: struct.unpack(">q", self._read_exact(8))[0],
-            b"d": lambda: struct.unpack(">f", self._read_exact(4))[0],
-            b"D": lambda: struct.unpack(">d", self._read_exact(8))[0],
-            b"C": lambda: self._read_exact(1).decode("utf-8"),
-            b"S": lambda: self._decode_string(),
-            b"H": lambda: self._decode_string(),
-        }.get(marker)
 
-        if parser is not None:
-            return parser()
-        elif marker == b'N':
-            raise UBJSONUnsupportedError(f"Unimplemented marker: {marker}")
+def get_next_marker(ubj: BytesIO):
+    while (marker := ubj.read(1)) == b'N':
+        continue
+
+    return marker
+
+def read_char(ubj: BytesIO, marker):
+    match marker:
+        case b'C':
+            return ubj.read(1).decode("utf-8")
+        case _:
+            raise UBJSONDecodeError()
+        
+def read_string(ubj: BytesIO, marker):
+    match marker:
+        case b'S':
+            length = read_numeric(ubj, get_next_marker(ubj))
+            return ubj.read(length).decode("utf-8")
+        case _:
+            raise UBJSONDecodeError()
+
+def read_numeric(ubj: BytesIO, marker):
+    match marker:
+        case b'i': # int8
+            return struct.unpack('b', ubj.read(1))[0]
+        case b'U': # uint8
+            return struct.unpack('B', ubj.read(1))[0]
+        case b'I': # int16
+            return struct.unpack('>h', ubj.read(2))[0]
+        case b'l': # int32
+            return struct.unpack('>i', ubj.read(4))[0]
+        case b'L': # int64
+            return struct.unpack('>q', ubj.read(8))[0]
+        case b'd': # float32
+            return struct.unpack('f', ubj.read(4))[0]
+        case b'D': # float64
+            return struct.unpack('d', ubj.read(8))[0]
+        case b'H': # High precision
+            return json.loads(read_string(ubj))
+        case _:
+            raise UBJSONDecodeError()
+
+def read_special(marker):
+    match marker:
+        case b'Z':
+            return None
+        case b'T':
+            return True
+        case b'F':
+            return False
+        case _:
+            raise UBJSONDecodeError()
+
+def get_container_type(ubj: BytesIO):
+    type_markers = []
+    fully_typed = False
+    while get_next_marker(ubj) == b'$':
+        marker = get_next_marker(ubj)
+        type_markers += [marker]
+        if marker not in [b'[', b'{']:
+            fully_typed = True
+            break
+
+    counts = []
+    if fully_typed:
+        for _ in range(len(type_markers)):
+            if get_next_marker(ubj) != b'#':
+                raise UBJSONDecodeError()
+            marker = get_next_marker(ubj)
+            counts.insert(0, read_numeric(ubj, marker))
+        if len(type_markers) != len(counts):
+            raise UBJSONDecodeError()
+    else:
+        ubj.seek(-1, SEEK_CUR)
+        while get_next_marker(ubj) == b'#':
+            marker = get_next_marker(ubj)
+            counts.insert(0, read_numeric(ubj, marker))
+        ubj.seek(-1, SEEK_CUR)
+
+        if len(type_markers) - len(counts) < -1:
+            raise UBJSONDecodeError()
+
+    return (type_markers, counts)
+
+def read_container(ubj: BytesIO, marker, type_spec = None):    
+    if marker == b'[':
+        return read_list(ubj, type_spec)
+    elif marker == b'{':
+        return read_dict(ubj, type_spec)
+
+def read_dict(ubj: BytesIO, type_spec = None):
+    if type_spec is None:
+        (type_markers, counts) = get_container_type(ubj)
+    else: 
+        (type_markers, counts) = type_spec
+
+    container = dict()
+    endmark = b'}'
+
+    if len(type_markers) == 0 and len(counts) == 0:
+        while (marker := get_next_marker(ubj)) != endmark:
+            ubj.seek(-1, SEEK_CUR)
+            key = read_string(ubj, b'S')
+            container[key] = read_element(ubj, get_next_marker(ubj))
+        return container
+    elif len(type_markers) == 0 and len(counts) == 1:
+        for _ in range(counts[0]):
+            key = read_string(ubj, b'S')
+            container[key] = read_element(ubj, get_next_marker(ubj))
+        return container
+    elif len(type_markers) >= 1:
+        if type_markers[0] in [b'[', b'{']:
+            type_spec = (type_markers[1:], counts[1:])
+            for _ in range(counts[0]):
+                if len(counts) == 1:
+                    type_spec = get_container_type(ubj)
+                key = read_string(ubj, b'S')
+                container[key] = read_container(ubj, type_markers[0], type_spec)
+            return container
+        elif type_markers[0] in SPECIAL_TYPES:
+            for _ in range(counts[0]):
+                key = read_string(ubj, b'S')
+                container[key] = read_special(type_markers[0])
+            return container
+        elif type_markers[0] in NUMERIC_TYPES:
+            for _ in range(counts[0]):
+                key = read_string(ubj, b'S')
+                container[key] = read_numeric(ubj, type_markers[0])
+            return container
         else:
-            raise UBJSONDecodeError(f"Unknown marker: {marker}")
+            for _ in range(counts[0]):
+                key = read_string(ubj, b'S')
+                container[key] = read_element(ubj, type_markers[0])
+            return container
 
-    def _decode_string(self) -> str:
-        length = self._decode_length()
-        return self._read_exact(length).decode("utf-8") if length > 0 else ""
+def read_list(ubj: BytesIO, type_spec = None):
+    if type_spec is None:
+        (type_markers, counts) = get_container_type(ubj)
+    else: 
+        (type_markers, counts) = type_spec
 
-    def _decode_length(self) -> int:
-        type_marker = self.fp.read(1)
+    container = list()
 
-        length = {
-            b"U": lambda: struct.unpack(">B", self._read_exact(1))[0],
-            b"i": lambda: struct.unpack(">b", self._read_exact(1))[0],
-            b"I": lambda: struct.unpack(">h", self._read_exact(2))[0],
-            b"l": lambda: struct.unpack(">i", self._read_exact(4))[0],
-            b"L": lambda: struct.unpack(">q", self._read_exact(8))[0],
-        }.get(type_marker)
-
-        if length is None:
-            raise UBJSONDecodeError(f"Invalid length type: {type_marker}")
-
-        value = length()
-        if value < 0:
-            raise UBJSONDecodeError(f"Negative length not allowed: {value}")
-        return value
-
-    def _parse_type(self) -> _JTYPE:
-        value_type = None
-        count = None
-
-        marker = self.fp.read(1)
-        match marker:
-            case b'[' | b'{':
-                # grab dollar sign ?
-                dollar_sign = self.fp.read(1)
-                if b'$' == dollar_sign:
-                    ## recurse _parse_type
-                    value_type = self._parse_type()
-                #else: ##f edge case - array no type == deepest collection has no type
-                # grab pound sign ?
-                pound_sign = self.fp.read(1)
-                if b'#' == pound_sign:
-                    ## call _decode_length
-                    count = self._decode_length()
-                else:
-                    ##f edge case - deepest type (could be outer type) is collection with no length (and no type) -- pound sign fails
-                    self.fp.seek(-1, SEEK_CUR)
-                    f = lambda x: None if x[0] is None else ((x[0][0], f(x[0][1])), x[0][1][1])
-                    try:
-                        return f((marker, (value_type, None)))
-                    except:
-                        # TypeError or IndexError when input is formatted wrong
-                        raise UBJSONDecodeError(f"Typed collection without count, expected b'#' got: {pound_sign}")
-                # return type
-                return (marker, (value_type, count))
-            case _:
-                # non-collection types are defined by one character
-                return marker
-
-    def _decode_array(self, array_type:Union[None, tuple[_JTYPE, int]]) -> list:
-        items = []
-
-        match array_type:
-            case None:
-                # Sentinel-based parsing
-                while True:
-                    peek = self.fp.read(1)
-                    if not peek:
-                        raise UBJSONDecodeError("Unexpected end of array.")
-                    if peek == b"]":
-                        break
-                    self.fp.seek(-1, SEEK_CUR)
-                    items.append(self._decode_from_type(None))
-            case (jtype, count):
-                # check if array is of fixed-length type
-                ctype, bytesize = {
-                    b'i': ('b', 1),
-                    b'U': ('B', 1),
-                    b'I': ('h', 2),
-                    b'l': ('l', 4),
-                    b'L': ('q', 8),
-                    b'd': ('f', 4),
-                    b'D': ('d', 8),
-                }.get(value_type, (None, None))
-
-                if ctype is not None:
-                    items = array(ctype, self._read_exact(bytesize*count)).tolist()
-                else:
-                    # array body is not known length in bytes
-                    for _ in range(count):
-                        items.append(self._decode_from_type(jtype))
-
-        return items
-
-    def _decode_object(self, object_type:Union[None, tuple[_JTYPE, int]]) -> dict:
-        obj = {}
-
-        match object_type:
-            case None:
-                while True:
-                    peek = self.fp.read(1)
-                    if not peek:
-                        raise UBJSONDecodeError("Unexpected end of object.")
-                    if peek == b"}":
-                        break
-                    self.fp.seek(-1, 1)
-                    key = self._decode_string()
-                    value = self._decode_from_type(None)
-                    obj[key] = value
-            case (jtype, count):
-                for _ in range(count):
-                    key = self._decode_string()
-                    value = self._decode_from_type(jtype)
-                    obj[key] = value
-
-        return obj
-
+    if len(type_markers) == 0 and len(counts) == 0:
+        while (marker := get_next_marker(ubj)) != b']':
+            container.append(read_element(ubj, marker))
+        return container
+    elif len(type_markers) == 0 and len(counts) == 1:
+        for _ in range(counts[0]):
+            marker = get_next_marker(ubj)
+            container.append(read_element(ubj, marker))
+        return container
+    elif len(type_markers) >= 1:
+        if type_markers[0] in [b'[', b'{']:
+            type_spec = (type_markers[1:], counts[1:])
+            for _ in range(counts[0]):
+                if len(counts) == 1:
+                    type_spec = get_container_type(ubj)
+                container.append(read_container(ubj, type_markers[0], type_spec))
+            return container
+        elif type_markers[0] in SPECIAL_TYPES:
+            return [read_special(type_markers[0])]*counts[0]
+        elif type_markers[0] in NUMERIC_TYPES :
+            if type_markers[0] in OPTIMIZED_TYPECODES:
+                ctype, bytesize = OPTIMIZED_TYPECODES[type_markers[0]]
+                return array(ctype, ubj.read(counts[0]*bytesize)).tolist()
+            else:
+                for _ in range(counts[0]):
+                    container.append(read_numeric(ubj, type_markers[0]))
+                return container
+        else:
+            return [read_element(ubj, type_markers[0])] * counts[0]
