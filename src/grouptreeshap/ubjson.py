@@ -63,20 +63,19 @@ def decode(ubj: bytes | bytearray | BytesIO):
     else:
         return result
 
-def read_element(ubj: BytesIO, marker):
+def read_element(ubj: BytesIO, marker, type_spec=None):
     if marker in NUMERIC_TYPES:
         return read_numeric(ubj, marker)
     elif marker in SPECIAL_TYPES:
         return read_special(marker)
     elif marker in CONTAINER_TYPES:
-        return read_container(ubj, marker)
+        return read_container(ubj, marker, type_spec)
     elif marker == b'S':
         return read_string(ubj, marker)
     elif marker == b'C':
         return read_char(ubj, marker)
     else:
         raise UBJSONDecodeError()
-
 
 def get_next_marker(ubj: BytesIO):
     while (marker := ubj.read(1)) == b'N':
@@ -131,122 +130,118 @@ def read_special(marker):
         case _:
             raise UBJSONDecodeError()
 
-def get_container_type(ubj: BytesIO):
+def read_container(ubj: BytesIO, marker, type_spec):
+    if type_spec is None or type_spec == ([], []):
+        type_markers, counts = get_container_typespec(ubj)
+    else:
+        type_markers, counts = type_spec
+        
+    if marker == b'[':
+        return read_list(ubj, type_markers, counts)
+    elif marker == b'{':
+        return read_dict(ubj, type_markers, counts)
+
+def get_container_types_markers(ubj: BytesIO):
     type_markers = []
-    fully_typed = False
     while get_next_marker(ubj) == b'$':
         marker = get_next_marker(ubj)
         type_markers += [marker]
         if marker not in [b'[', b'{']:
-            fully_typed = True
             break
-
-    counts = []
-    if fully_typed:
-        for _ in range(len(type_markers)):
-            if get_next_marker(ubj) != b'#':
-                raise UBJSONDecodeError()
-            marker = get_next_marker(ubj)
-            counts.insert(0, read_numeric(ubj, marker))
-        if len(type_markers) != len(counts):
-            raise UBJSONDecodeError()
     else:
         ubj.seek(-1, SEEK_CUR)
-        while get_next_marker(ubj) == b'#':
-            marker = get_next_marker(ubj)
-            counts.insert(0, read_numeric(ubj, marker))
-        ubj.seek(-1, SEEK_CUR)
+    
+    return type_markers
 
-        if len(type_markers) - len(counts) < -1:
+def get_container_counts(ubj, type_markers):
+    counts = []
+    for _ in range(len(type_markers)):
+        marker = get_next_marker(ubj)
+        print(marker)
+        if marker != b'#':
             raise UBJSONDecodeError()
+        counts.insert(0, read_numeric(ubj, get_next_marker(ubj)))
 
-    return (type_markers, counts)
-
-def read_container(ubj: BytesIO, marker, type_spec = None):    
-    if marker == b'[':
-        return read_list(ubj, type_spec)
-    elif marker == b'{':
-        return read_dict(ubj, type_spec)
-
-def read_dict(ubj: BytesIO, type_spec = None):
-    if type_spec is None:
-        (type_markers, counts) = get_container_type(ubj)
-    else: 
-        (type_markers, counts) = type_spec
-
-    container = dict()
-    endmark = b'}'
-
-    if len(type_markers) == 0 and len(counts) == 0:
-        while (marker := get_next_marker(ubj)) != endmark:
-            ubj.seek(-1, SEEK_CUR)
-            key = read_string(ubj, b'S')
-            container[key] = read_element(ubj, get_next_marker(ubj))
-        return container
-    elif len(type_markers) == 0 and len(counts) == 1:
-        for _ in range(counts[0]):
-            key = read_string(ubj, b'S')
-            container[key] = read_element(ubj, get_next_marker(ubj))
-        return container
-    elif len(type_markers) >= 1:
-        if type_markers[0] in [b'[', b'{']:
-            type_spec = (type_markers[1:], counts[1:])
-            for _ in range(counts[0]):
-                if len(counts) == 1:
-                    type_spec = get_container_type(ubj)
-                key = read_string(ubj, b'S')
-                container[key] = read_container(ubj, type_markers[0], type_spec)
-            return container
-        elif type_markers[0] in SPECIAL_TYPES:
-            for _ in range(counts[0]):
-                key = read_string(ubj, b'S')
-                container[key] = read_special(type_markers[0])
-            return container
-        elif type_markers[0] in NUMERIC_TYPES:
-            for _ in range(counts[0]):
-                key = read_string(ubj, b'S')
-                container[key] = read_numeric(ubj, type_markers[0])
-            return container
+    if len(type_markers) == 0 or type_markers[-1] in [b'[', b'{']:
+        marker = get_next_marker(ubj)
+        if marker == b'#':
+            counts.insert(0, read_numeric(ubj, get_next_marker(ubj)))
         else:
-            for _ in range(counts[0]):
-                key = read_string(ubj, b'S')
-                container[key] = read_element(ubj, type_markers[0])
-            return container
+            ubj.seek(-1, SEEK_CUR)
 
-def read_list(ubj: BytesIO, type_spec = None):
-    if type_spec is None:
-        (type_markers, counts) = get_container_type(ubj)
-    else: 
-        (type_markers, counts) = type_spec
+    return counts
 
+def get_container_typespec(ubj: BytesIO):
+    type_markers = get_container_types_markers(ubj)
+    print(type_markers)
+    counts = get_container_counts(ubj, type_markers)
+
+    return type_markers, counts
+
+def read_list_unoptimized(ubj: BytesIO, count: int | None, type_spec=None):
+    container = list()
+    if count is None:
+        while (marker := get_next_marker(ubj)) != b']':
+            container.append(read_element(ubj, marker, type_spec))
+        return container
+    else:
+        for _ in range(count):
+            marker = get_next_marker(ubj)
+            container.append(read_element(ubj, marker, type_spec))
+        return container
+
+def read_list_optimized(ubj: BytesIO, type_markers, counts):
     container = list()
 
-    if len(type_markers) == 0 and len(counts) == 0:
-        while (marker := get_next_marker(ubj)) != b']':
-            container.append(read_element(ubj, marker))
-        return container
-    elif len(type_markers) == 0 and len(counts) == 1:
+    if type_markers[0] in SPECIAL_TYPES:
+        return [read_special(type_markers[0])]*counts[0]
+    elif type_markers[0] in OPTIMIZED_TYPECODES:
+            ctype, bytesize = OPTIMIZED_TYPECODES[type_markers[0]]
+            return array(ctype, ubj.read(counts[0]*bytesize)).tolist()
+    else:
         for _ in range(counts[0]):
-            marker = get_next_marker(ubj)
-            container.append(read_element(ubj, marker))
+            container.append(read_element(ubj, type_markers[0], (type_markers[1:], counts[1:])))
         return container
-    elif len(type_markers) >= 1:
-        if type_markers[0] in [b'[', b'{']:
-            type_spec = (type_markers[1:], counts[1:])
-            for _ in range(counts[0]):
-                if len(counts) <= 1:
-                    type_spec = get_container_type(ubj)
-                container.append(read_container(ubj, type_markers[0], type_spec))
-            return container
-        elif type_markers[0] in SPECIAL_TYPES:
-            return [read_special(type_markers[0])]*counts[0]
-        elif type_markers[0] in NUMERIC_TYPES :
-            if type_markers[0] in OPTIMIZED_TYPECODES:
-                ctype, bytesize = OPTIMIZED_TYPECODES[type_markers[0]]
-                return array(ctype, ubj.read(counts[0]*bytesize)).tolist()
-            else:
-                for _ in range(counts[0]):
-                    container.append(read_numeric(ubj, type_markers[0]))
-                return container
-        else:
-            return [read_element(ubj, type_markers[0])] * counts[0]
+
+def read_list(ubj: BytesIO, type_markers, counts):
+    if len(type_markers) == 0:
+        count = counts[0] if len(counts) > 0 else None
+        return read_list_unoptimized(ubj, count, (type_markers[1:], counts[1:]))
+    else:
+        return read_list_optimized(ubj, type_markers, counts)
+    
+def read_dict_unoptimized(ubj: BytesIO, count: int | None, type_spec=None):
+    container = dict()
+    if count is None:
+        while (marker := get_next_marker(ubj)) != b'}':
+            ubj.seek(-1, SEEK_CUR)
+            key = read_string(ubj, b'S')
+            marker = get_next_marker(ubj)
+            container[key] = read_element(ubj, marker, type_spec)
+        return container
+    else:
+        for _ in range(count):
+            key = read_string(ubj, b'S')
+            marker = get_next_marker(ubj)
+            container[key] = read_element(ubj, marker, type_spec)
+        return container
+
+def read_dict_optimized(ubj: BytesIO, type_markers, counts):
+    container = dict()
+    if type_markers[0] in SPECIAL_TYPES:
+        for _ in range(counts[0]):
+            key = read_string(ubj, b'S')
+            container[key] = read_special(type_markers[0])
+        return container
+    else:
+        for _ in range(counts[0]):
+            key = read_string(ubj, b'S')
+            container[key] = read_element(ubj, type_markers[0], (type_markers[1:], counts[1:]))
+        return container
+
+def read_dict(ubj: BytesIO, type_markers, counts):
+    if len(type_markers) == 0:
+        count = counts[0] if len(counts) > 0 else None
+        return read_dict_unoptimized(ubj, count, (type_markers[1:], counts[1:]))
+    else:
+        return read_dict_optimized(ubj, type_markers, counts)
