@@ -118,6 +118,65 @@ ubjson_examples = [
             b'\x3f\xc0\x00\x00',
         [1.0, 2.0, 1.5]
     ),
+    # Optimized with type + count: float64 array
+    # [ [$][D][#][i][3]  [1.0] [2.0] [1.5]
+    (
+        b'[$D#i\x03'
+            b'\x3f\xf0\x00\x00\x00\x00\x00\x00'
+            b'\x40\x00\x00\x00\x00\x00\x00\x00'
+            b'\x3f\xf8\x00\x00\x00\x00\x00\x00',
+        [1.0, 2.0, 1.5]
+    ),
+
+    # Optimized with type + count: int8 array
+    # [ [$][i][#][i][3]  [42] [43] [44]
+    (
+        b'[$i#i\x03'
+            b'\x2a'
+            b'\x2b'
+            b'\x2c',
+        [42, 43, 44]
+    ),
+
+    # Optimized with type + count: uint8 array
+    # [ [$][U][#][i][3]  [200] [201] [202]
+    (
+        b'[$U#i\x03'
+            b'\xc8'
+            b'\xc9'
+            b'\xca',
+        [200, 201, 202]
+    ),
+
+    # Optimized with type + count: int16 array
+    # [ [$][I][#][i][3]  [1000] [1001] [1002]
+    (
+        b'[$I#i\x03'
+            b'\x03\xe8'
+            b'\x03\xe9'
+            b'\x03\xea',
+        [1000, 1001, 1002]
+    ),
+
+    # Optimized with type + count: int32 array
+    # [ [$][l][#][i][3]  [100000] [100001] [100002]
+    (
+        b'[$l#i\x03'
+            b'\x00\x01\x86\xa0'
+            b'\x00\x01\x86\xa1'
+            b'\x00\x01\x86\xa2',
+        [100000, 100001, 100002]
+    ),
+
+    # Optimized with type + count: int64 array
+    # [ [$][L][#][i][3]  [100000] [100001] [100002]
+    (
+        b'[$L#i\x03'
+            b'\x00\x00\x00\x00\x00\x01\x86\xa0'
+            b'\x00\x00\x00\x00\x00\x01\x86\xa1'
+            b'\x00\x00\x00\x00\x00\x01\x86\xa2',
+        [100000, 100001, 100002]
+    ),
 
     # Strongly typed nested arrays
     (

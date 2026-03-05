@@ -153,10 +153,11 @@ class UBJSONDecoder:
             }.get(jtype, (None, None))
 
             if ctype is not None:
-                temp = array(ctype, self._read_exact(bytesize*count))
-                if bytesize > 1:
-                    temp.byteswap()
-                items = temp.tolist()
+                #temp = array(ctype, self._read_exact(bytesize*count))
+                #if bytesize > 1:
+                #    temp.byteswap()
+                #items = temp.tolist()
+                items = list(struct.unpack(f">{count}{ctype}", self._read_exact(bytesize*count)))
             else:
                 # array body is not known length in bytes
                 for _ in range(count):
