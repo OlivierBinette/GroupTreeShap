@@ -121,7 +121,7 @@ def read_special(marker: bytes) -> None | bool:
         case b"F":
             return False
         case b"N":
-            raise UBJSONUnsupportedError(f"Marker N is not a supported value.")
+            raise UBJSONUnsupportedError("Marker N is not a supported value.")
         case _:
             raise UBJSONDecodeError(f"Invalid special marker {marker} encountered.")
 

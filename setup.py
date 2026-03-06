@@ -37,6 +37,7 @@ setup(
         ],
         "dev": [
             "ruff",
+            "pre-commit",
         ],
     },
     cmdclass={"build_ext": build_ext},
