@@ -23,19 +23,20 @@ setup(
         "pybind11>=3",
     ],
     extras_require={
+        "integration": [
+            "scikit-learn>=1.5",
+            "xgboost>=3",
+            "pandas>=2",
+        ],
         "test": [
             "pytest",
             "testbook",
             "ipykernel",
             "jupyter",
             "ipython",
-            "scikit-learn",
-            "shap",
-            "matplotlib",
-            "plotly",
-            "xgboost",
         ],
         "dev": [
+            "hatch",
             "ruff",
             "pre-commit",
         ],

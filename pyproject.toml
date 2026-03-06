@@ -22,4 +22,19 @@ install-jupyter-kernel = "ipython kernel install --user --name=$PIXI_PROJECT_NAM
 python = "3.11.*"
 
 [tool.pixi.pypi-dependencies]
-grouptreeshap = { path = ".", editable = true, extras = ["test", "dev"] }
+grouptreeshap = { path = ".", editable = true, extras = ["integration", "dev", "test"] }
+
+[tool.hatch.envs.hatch-test]
+installer = "uv"
+skip_install = true  # Manual installation in `pre-install-commands`
+pre-install-commands = [
+    "{env:HATCH_UV} pip install .[integration] --resolution={env:PKG_DEPS_RESOLUTION}",
+    "{env:HATCH_UV} pip install .[test]"
+]
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
+pkg_deps_resolution = ["highest"]
+
+[tool.hatch.envs.hatch-test.overrides]
+matrix.pkg_deps_resolution.env-vars = "PKG_DEPS_RESOLUTION"
