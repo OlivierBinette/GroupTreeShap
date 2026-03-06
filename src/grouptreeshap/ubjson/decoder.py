@@ -2,6 +2,7 @@ import struct
 from io import BytesIO, SEEK_CUR
 from array import array
 import json
+import sys
 
 from grouptreeshap.ubjson.markers import CONTAINER_TYPES, NUMERIC_TYPES, SPECIAL_TYPES, OPTIMIZED_TYPECODES
 
@@ -10,7 +11,7 @@ JSONLike = None | bool | int | float | str | list['JSONLike'] | dict[str, 'JSONL
 class UBJSONDecodeError(Exception):
     pass
 
-class UBJSONUnsupportedError(Exception):
+class UBJSONUnsupportedError(UBJSONDecodeError):
     pass
 
 class UBJSONDecoder:
@@ -56,7 +57,7 @@ def read_element(ubj: BytesIO, marker: bytes, type_spec: tuple | None = None) ->
         raise UBJSONDecodeError(f"Invalid marker {marker} encountered at position {ubj.tell()}")
 
 def get_next_marker(ubj: BytesIO) -> bytes:
-    while (marker := read_bytes(ubj, 1)) == b'N':
+    while (marker := ubj.read(1)) == b'N':
         continue
 
     return marker
@@ -81,9 +82,9 @@ def read_numeric(ubj: BytesIO, marker: bytes) -> int | float:
         case b'L': # int64
             return struct.unpack('>q', read_bytes(ubj, 8))[0]
         case b'd': # float32
-            return struct.unpack('f', read_bytes(ubj, 4))[0]
+            return struct.unpack('>f', read_bytes(ubj, 4))[0]
         case b'D': # float64
-            return struct.unpack('d', read_bytes(ubj, 8))[0]
+            return struct.unpack('>d', read_bytes(ubj, 8))[0]
         case b'H': # High precision
             return json.loads(read_string(ubj))
         case _:
@@ -98,7 +99,7 @@ def read_special(marker: bytes) -> None | bool:
         case b'F':
             return False
         case b'N':
-            return UBJSONUnsupportedError(f"Marker N is not a supported value.")
+            raise UBJSONUnsupportedError(f"Marker N is not a supported value.")
         case _:
             raise UBJSONDecodeError(f"Invalid special marker {marker} encountered.")
 
@@ -112,6 +113,8 @@ def read_container(ubj: BytesIO, marker: bytes, type_spec: None | tuple) -> list
         return read_list(ubj, type_markers, counts)
     elif marker == b'{':
         return read_dict(ubj, type_markers, counts)
+    else:
+        raise UBJSONDecodeError(f"Invalid container marker {marker} at position {ubj.tell()}")
 
 def get_container_types_markers(ubj: BytesIO) -> list[bytes]:
     type_markers = []
@@ -129,7 +132,6 @@ def get_container_counts(ubj, type_markers) -> list[int]:
     counts = []
     for _ in range(len(type_markers)):
         marker = get_next_marker(ubj)
-        print(marker)
         if marker != b'#':
             raise UBJSONDecodeError(f"Expected count marker # at position {ubj.tell()}")
         counts.insert(0, read_numeric(ubj, get_next_marker(ubj)))
@@ -145,7 +147,6 @@ def get_container_counts(ubj, type_markers) -> list[int]:
 
 def get_container_typespec(ubj: BytesIO) -> tuple:
     type_markers = get_container_types_markers(ubj)
-    print(type_markers)
     counts = get_container_counts(ubj, type_markers)
 
     return type_markers, counts
@@ -169,7 +170,10 @@ def read_list_optimized(ubj: BytesIO, type_markers: list[bytes], counts: list[in
         return [read_special(type_markers[0])]*counts[0]
     elif type_markers[0] in OPTIMIZED_TYPECODES:
             ctype, bytesize = OPTIMIZED_TYPECODES[type_markers[0]]
-            return array(ctype, read_bytes(ubj, counts[0]*bytesize)).tolist()
+            arr = array(ctype, read_bytes(ubj, counts[0]*bytesize))
+            if sys.byteorder == 'little':
+                arr.byteswap()
+            return arr.tolist()
     else:
         for _ in range(counts[0]):
             container.append(read_element(ubj, type_markers[0], (type_markers[1:], counts[1:])))

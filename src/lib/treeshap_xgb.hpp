@@ -148,12 +148,6 @@ namespace grouptreeshap
             ExtendPath(unique_path, unique_depth, parent_zero_fraction, parent_one_fraction,
                        parent_feature_index);
         }
-        const int split_index = tree.feature.at(nidx);
-        if (split_index < 0)
-        {
-            return;
-        }
-        const int split_index_repr = feature_reprs.at(split_index);
 
         if (tree.children_right.at(nidx) < 0) // leaf node
         {
@@ -167,6 +161,10 @@ namespace grouptreeshap
         }
         else // internal node
         {
+            const int split_index = tree.feature.at(nidx);
+            check(split_index >= 0, "Internal node has invalid (negative) feature index.");
+            const int split_index_repr = feature_reprs.at(split_index);
+
             // find which branch is "hot" (meaning x would follow it)
             const int cleft = tree.children_left.at(nidx);
             const int cright = tree.children_right.at(nidx);
@@ -224,13 +222,13 @@ namespace grouptreeshap
                       pyarray<float> &phi, int condition,
                       int condition_feature, const pyarray<int> &feature_reprs)
     {
-        check(phi.ndim() != 1, "phi must be 1-dimensional");
-        check(x.ndim() != 1 || x.shape(0) == 0, "x must be 1-dimensional and non-empty");
-        check(phi.shape(0) != x.shape(0), "length of phi and x don't match.");
-        check(feature_reprs.ndim() != 1 || feature_reprs.shape(0) != x.shape(0), "Invalid feature_reprs dimension or length.");
+        check(phi.ndim() == 1, "phi must be 1-dimensional");
+        check(x.ndim() == 1 && x.shape(0) > 0, "x must be 1-dimensional and non-empty");
+        check(phi.shape(0) == x.shape(0), "length of phi and x don't match.");
+        check(feature_reprs.ndim() == 1 && feature_reprs.shape(0) == x.shape(0), "Invalid feature_reprs dimension or length.");
 
         int depth = tree.depth();
-        check(depth > 128, "Maximum tree depth of 128 has been exceeded.");
+        check(depth <= 128, "Maximum tree depth of 128 has been exceeded.");
 
         // Preallocate space for the unique path data
         int const maxd = depth + 2;
