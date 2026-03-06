@@ -5,6 +5,7 @@ from tests.resources.xgb_export_example import XGB_EXPORT_EXAMPLE
 from grouptreeshap.tree_ensemble import TreeEnsemble
 from unittest.mock import MagicMock
 
+
 def test_from_xgboost():
     ubj = XGB_EXPORT_EXAMPLE[0]
 
@@ -15,9 +16,20 @@ def test_from_xgboost():
     assert len(tree_ensemble.trees) == 1
 
     tree = tree_ensemble.trees[0]
-    np.testing.assert_equal(tree.value, [-1.4470355154116987e-06, -23.804027557373047, 22.888486862182617])
-    np.testing.assert_equal(tree.split_type, [0,0,0])
-    np.testing.assert_equal(tree.threshold, np.nextafter(np.array([0.003770889015868306, -23.804027557373047, 22.888486862182617], dtype=np.float32), -np.float32(np.inf)))
+    np.testing.assert_equal(
+        tree.value, [-1.4470355154116987e-06, -23.804027557373047, 22.888486862182617]
+    )
+    np.testing.assert_equal(tree.split_type, [0, 0, 0])
+    np.testing.assert_equal(
+        tree.threshold,
+        np.nextafter(
+            np.array(
+                [0.003770889015868306, -23.804027557373047, 22.888486862182617],
+                dtype=np.float32,
+            ),
+            -np.float32(np.inf),
+        ),
+    )
     np.testing.assert_equal(tree.children_left, [1, -1, -1])
     np.testing.assert_equal(tree.children_right, [2, -1, -1])
     np.testing.assert_equal(tree.feature, [3, 0, 0])

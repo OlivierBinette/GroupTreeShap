@@ -3,6 +3,7 @@ import numpy as np
 from grouptreeshap.treeshap import treeshap_xgb
 from grouptreeshap.tree_ensemble import TreeEnsemble
 
+
 class GroupedTreeExplainer:
     def __init__(self, model: any) -> None:
         if isinstance(model, TreeEnsemble):
@@ -26,7 +27,14 @@ class GroupedTreeExplainer:
         this_tree_contribs = np.zeros(len(x), dtype=np.float32)
         for tree in self.tree_ensemble.trees:
             this_tree_contribs *= 0
-            treeshap_xgb(tree, x, this_tree_contribs, 0, feature_reprs[0], feature_reprs=feature_reprs)
+            treeshap_xgb(
+                tree,
+                x,
+                this_tree_contribs,
+                0,
+                feature_reprs[0],
+                feature_reprs=feature_reprs,
+            )
             phi += this_tree_contribs
 
         return phi
