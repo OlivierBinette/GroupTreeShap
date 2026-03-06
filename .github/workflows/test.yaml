@@ -1,0 +1,17 @@
+name: Test Package
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Hatch
+        run: pipx install hatch
+      - name: Run tests
+        run: hatch test --all
