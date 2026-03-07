@@ -10,8 +10,9 @@ ext_modules = intree_extensions(
 )
 
 for ext in ext_modules:
-    if sys.platform in ["darwin", "linux"]:
-        ext.extra_compile_args = ["-O", "-std=c++17"]
+    ext.cxx_std = "c++11"
+    if sys.platform in ["linux"]:
+        ext.extra_compile_args = ["-O2"]
 
 setup(
     ext_modules=ext_modules,
