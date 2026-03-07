@@ -11,9 +11,7 @@ ext_modules = intree_extensions(
 
 for ext in ext_modules:
     if sys.platform in ["darwin", "linux"]:
-        ext.extra_compile_args = [
-            "-ffp-contract=fast",
-        ]
+        ext.extra_compile_args = ["-ffp-contract=fast", "-std=c++11"]
 
 setup(
     ext_modules=ext_modules,
