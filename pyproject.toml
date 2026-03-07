@@ -8,7 +8,7 @@ addopts = [
 ]
 
 [tool.pixi.workspace]
-channels = ["conda-forgtoto e"]
+channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64"]
 
 [tool.pixi.target.osx.activation]

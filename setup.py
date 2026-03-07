@@ -1,3 +1,4 @@
+import sys
 from setuptools import setup, find_packages
 from pybind11.setup_helpers import build_ext, intree_extensions
 
@@ -7,6 +8,12 @@ ext_modules = intree_extensions(
         "src/grouptreeshap/treeshap.cpp",
     ]
 )
+
+for ext in ext_modules:
+    if sys.platform in ["darwin", "linux"]:
+        ext.extra_compile_args = [
+            "-ffp-contract=fast",
+        ]
 
 setup(
     ext_modules=ext_modules,
