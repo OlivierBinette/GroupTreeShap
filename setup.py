@@ -12,7 +12,7 @@ ext_modules = intree_extensions(
 for ext in ext_modules:
     ext.cxx_std = 11
     if sys.platform in ["linux"]:
-        ext.extra_compile_args = ["-O2", "-ffp-contract=fast", "-fopenmp"]
+        ext.extra_compile_args = ["-O2", "-ffp-contract=fast"]
 
 setup(
     ext_modules=ext_modules,
