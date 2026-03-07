@@ -28,17 +28,17 @@ namespace grouptreeshap
     struct PathElement
     {
         int feature_index;
-        double zero_fraction;
-        double one_fraction;
-        double pweight;
+        float zero_fraction;
+        float one_fraction;
+        float pweight;
         PathElement() = default;
-        PathElement(int i, double z, double o, double w)
+        PathElement(int i, float z, float o, float w)
             : feature_index(i), zero_fraction(z), one_fraction(o), pweight(w) {}
     };
 
     // extend our decision path with a fraction of one and zero extensions
-    void ExtendPath(PathElement *unique_path, int unique_depth, double zero_fraction,
-                    double one_fraction, int feature_index)
+    void ExtendPath(PathElement *unique_path, int unique_depth, float zero_fraction,
+                    float one_fraction, int feature_index)
     {
         unique_path[unique_depth].feature_index = feature_index;
         unique_path[unique_depth].zero_fraction = zero_fraction;
@@ -47,33 +47,33 @@ namespace grouptreeshap
         for (int i = unique_depth - 1; i >= 0; i--)
         {
             unique_path[i + 1].pweight +=
-                one_fraction * unique_path[i].pweight * (i + 1) / static_cast<double>(unique_depth + 1);
+                one_fraction * unique_path[i].pweight * (i + 1) / static_cast<float>(unique_depth + 1);
             unique_path[i].pweight = zero_fraction * unique_path[i].pweight * (unique_depth - i) /
-                                     static_cast<double>(unique_depth + 1);
+                                     static_cast<float>(unique_depth + 1);
         }
     }
 
     // undo a previous extension of the decision path
     void UnwindPath(PathElement *unique_path, int unique_depth, int path_index)
     {
-        const double one_fraction = unique_path[path_index].one_fraction;
-        const double zero_fraction = unique_path[path_index].zero_fraction;
-        double next_one_portion = unique_path[unique_depth].pweight;
+        const float one_fraction = unique_path[path_index].one_fraction;
+        const float zero_fraction = unique_path[path_index].zero_fraction;
+        float next_one_portion = unique_path[unique_depth].pweight;
 
         for (int i = unique_depth - 1; i >= 0; --i)
         {
             if (one_fraction != 0)
             {
-                const double tmp = unique_path[i].pweight;
+                const float tmp = unique_path[i].pweight;
                 unique_path[i].pweight =
-                    next_one_portion * (unique_depth + 1) / static_cast<double>((i + 1) * one_fraction);
+                    next_one_portion * (unique_depth + 1) / static_cast<float>((i + 1) * one_fraction);
                 next_one_portion = tmp - unique_path[i].pweight * zero_fraction * (unique_depth - i) /
-                                             static_cast<double>(unique_depth + 1);
+                                             static_cast<float>(unique_depth + 1);
             }
             else
             {
                 unique_path[i].pweight = (unique_path[i].pweight * (unique_depth + 1)) /
-                                         static_cast<double>(zero_fraction * (unique_depth - i));
+                                         static_cast<float>(zero_fraction * (unique_depth - i));
             }
         }
 
@@ -87,28 +87,28 @@ namespace grouptreeshap
 
     // determine what the total permutation weight would be if
     // we unwound a previous extension in the decision path
-    double UnwoundPathSum(const PathElement *unique_path, int unique_depth,
+    float UnwoundPathSum(const PathElement *unique_path, int unique_depth,
                          int path_index)
     {
-        const double one_fraction = unique_path[path_index].one_fraction;
-        const double zero_fraction = unique_path[path_index].zero_fraction;
-        double next_one_portion = unique_path[unique_depth].pweight;
-        double total = 0;
+        const float one_fraction = unique_path[path_index].one_fraction;
+        const float zero_fraction = unique_path[path_index].zero_fraction;
+        float next_one_portion = unique_path[unique_depth].pweight;
+        float total = 0;
         for (int i = unique_depth - 1; i >= 0; --i)
         {
             if (one_fraction != 0)
             {
-                const double tmp =
-                    next_one_portion * (unique_depth + 1) / static_cast<double>((i + 1) * one_fraction);
+                const float tmp =
+                    next_one_portion * (unique_depth + 1) / static_cast<float>((i + 1) * one_fraction);
                 total += tmp;
                 next_one_portion =
                     unique_path[i].pweight -
-                    tmp * zero_fraction * ((unique_depth - i) / static_cast<double>(unique_depth + 1));
+                    tmp * zero_fraction * ((unique_depth - i) / static_cast<float>(unique_depth + 1));
             }
             else if (zero_fraction != 0)
             {
                 total += (unique_path[i].pweight / zero_fraction) /
-                         ((unique_depth - i) / static_cast<double>(unique_depth + 1));
+                         ((unique_depth - i) / static_cast<float>(unique_depth + 1));
             }
         }
         return total;
@@ -130,10 +130,10 @@ namespace grouptreeshap
      * \param feature_reprs feature representatives for groupSHAP calculation
      */
     void TreeShap(const Tree &tree, const pyarray<double> &x,
-                  pyarray<double> &phi,
+                  pyarray<float> &phi,
                   int nidx, int unique_depth, PathElement *parent_unique_path,
-                  double parent_zero_fraction, double parent_one_fraction, int parent_feature_index,
-                  int condition, int condition_feature, double condition_fraction, const pyarray<int> &feature_reprs)
+                  float parent_zero_fraction, float parent_one_fraction, int parent_feature_index,
+                  int condition, int condition_feature, float condition_fraction, const pyarray<int> &feature_reprs)
     {
         // stop if we have no weight coming down to us
         if (condition_fraction == 0)
@@ -153,10 +153,10 @@ namespace grouptreeshap
         {
             for (int i = 1; i <= unique_depth; ++i)
             {
-                const double w = UnwoundPathSum(unique_path, unique_depth, i);
+                const float w = UnwoundPathSum(unique_path, unique_depth, i);
                 const PathElement &el = unique_path[i];
                 phi.mutable_at(el.feature_index) +=
-                    w * (el.one_fraction - el.zero_fraction) * tree.value.at(nidx) * condition_fraction;
+                    w * (el.one_fraction - el.zero_fraction) * static_cast<float>(tree.value.at(nidx)) * condition_fraction;
             }
         }
         else // internal node
@@ -171,11 +171,11 @@ namespace grouptreeshap
             const int hot_index = tree.get_next_node(nidx, x);
             const int cold_index = (hot_index == cleft) ? cright : cleft;
 
-            const double w = tree.weighted_n_node_samples.at(nidx);
-            const double hot_zero_fraction = tree.weighted_n_node_samples.at(hot_index) / w;
-            const double cold_zero_fraction = tree.weighted_n_node_samples.at(cold_index) / w;
-            double incoming_zero_fraction = 1.0;
-            double incoming_one_fraction = 1.0;
+            const float w = static_cast<float>(tree.weighted_n_node_samples.at(nidx));
+            const float hot_zero_fraction = static_cast<float>(tree.weighted_n_node_samples.at(hot_index)) / w;
+            const float cold_zero_fraction = static_cast<float>(tree.weighted_n_node_samples.at(cold_index)) / w;
+            float incoming_zero_fraction = 1.0;
+            float incoming_one_fraction = 1.0;
 
             // see if we have already split on this feature,
             // if so we undo that split so we can redo it for this node
@@ -194,8 +194,8 @@ namespace grouptreeshap
             }
 
             // divide up the condition_fraction among the recursive calls
-            double hot_condition_fraction = condition_fraction;
-            double cold_condition_fraction = condition_fraction;
+            float hot_condition_fraction = condition_fraction;
+            float cold_condition_fraction = condition_fraction;
             if (condition > 0 && split_index_repr == condition_feature)
             {
                 cold_condition_fraction = 0;
@@ -219,7 +219,7 @@ namespace grouptreeshap
     }
 
     void treeshap_xgb(const Tree &tree, const pyarray<double> &x,
-                      pyarray<double> &phi, int condition,
+                      pyarray<float> &phi, int condition,
                       int condition_feature, const pyarray<int> &feature_reprs)
     {
         check(phi.ndim() == 1, "phi must be 1-dimensional");
