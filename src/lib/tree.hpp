@@ -152,7 +152,6 @@ namespace grouptreeshap
             }
             else
             {
-                float feature_value = x.at(split_index);
                 if (split_type.at(start_node))
                 { // categorical split
                     int i = 0;
@@ -173,7 +172,7 @@ namespace grouptreeshap
                 }
                 else
                 { // numerical split
-                    if (feature_value <= threshold.at(start_node))
+                    if (x.at(split_index) <= threshold.at(start_node))
                     {
                         return cleft;
                     }
