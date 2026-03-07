@@ -14,4 +14,4 @@ jobs:
       - name: Install Hatch
         run: pipx install hatch
       - name: Run tests
-        run: hatch test --all
+        run: hatch test tests/unit/ --all

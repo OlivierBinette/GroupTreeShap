@@ -1,4 +1,3 @@
-import sys
 from setuptools import setup, find_packages
 from pybind11.setup_helpers import build_ext, intree_extensions
 
@@ -11,8 +10,7 @@ ext_modules = intree_extensions(
 
 for ext in ext_modules:
     ext.cxx_std = 11
-    if sys.platform in ["linux"]:
-        ext.extra_compile_args = ["-O2", "-ffp-contract=fast", "-fno-tree-vectorize"]
+
 
 setup(
     ext_modules=ext_modules,
