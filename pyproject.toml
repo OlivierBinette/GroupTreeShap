@@ -28,8 +28,8 @@ grouptreeshap = { path = ".", editable = true, extras = ["integration", "dev", "
 installer = "uv"
 skip_install = true  # Manual installation in `pre-install-commands`
 pre-install-commands = [
-    "{env:HATCH_UV} pip install .[integration] --resolution={env:PKG_DEPS_RESOLUTION}",
-    "{env:HATCH_UV} pip install .[test]"
+    "{env:HATCH_UV} pip install .[integration] --resolution={env:PKG_DEPS_RESOLUTION} --no-binary xgboost",
+    "{env:HATCH_UV} pip install .[test]",
 ]
 
 [[tool.hatch.envs.hatch-test.matrix]]

@@ -8,10 +8,17 @@ on:
 
 jobs:
   build:
-    runs-on: [ubuntu-24.04-arm, macos-latest]
+    runs-on: ["ubuntu-latest"]
     steps:
       - uses: actions/checkout@v4
       - name: Install Hatch
         run: pipx install hatch
+      - name: Print system info
+        run: |
+          echo "CC=$CC"
+          echo "CXX=$CXX"
+          echo "CFLAGS=$CFLAGS"
+          echo "CXXFLAGS=$CXXFLAGS"
+          echo "CPPFLAGS=$CPPFLAGS"
       - name: Run tests
         run: hatch test --all
