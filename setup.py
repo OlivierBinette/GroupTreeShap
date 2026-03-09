@@ -15,7 +15,7 @@ for ext in ext_modules:
 setup(
     ext_modules=ext_modules,
     name="grouptreeshap",
-    version="0.1.0",
+    version="0.1.1",
     author="Olivier Binette",
     author_email="olivier.binette@gmail.com",
     url="https://github.com/OlivierBinette/GroupedTreeShap",
