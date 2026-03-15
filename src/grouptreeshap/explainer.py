@@ -5,7 +5,20 @@ from grouptreeshap.tree_ensemble import TreeEnsemble
 
 
 class GroupedTreeExplainer:
+    """
+    Compute grouped TreeShap values for tree ensembles.
+
+    This explainer wraps a tree-based model and computes SHAP values using the
+    GroupTreeSHAP algorithm implemented in the underlying C++ extension.
+    """
+
     def __init__(self, model: any) -> None:
+        """
+        Parameters
+        ----------
+        model : TreeEnsemble, xgboost.Booster, xgboost.XGBRegressor, or xgboost.XGBClassifier
+            Only supports single-target models.
+        """
         if isinstance(model, TreeEnsemble):
             self.tree_ensemble = model
         elif hasattr(model, "get_booster"):
@@ -20,6 +33,24 @@ class GroupedTreeExplainer:
         x: list[float],
         feature_reprs: list[int] | None = None,
     ) -> list[float]:
+        """
+        Compute grouped TreeShap values for a single input sample.
+
+        Parameters
+        ----------
+        x : list[float]
+            Feature values for the sample to explain.
+
+        feature_reprs : list[int], optional
+            Feature grouping representation. Each element maps an input
+            feature to its group index. If ``None``, each feature is treated
+            as its own group.
+
+        Returns
+        -------
+        list[float]
+            SHAP values corresponding to each feature (or feature group).
+        """
         if feature_reprs is None:
             feature_reprs = list(range(len(x)))
 

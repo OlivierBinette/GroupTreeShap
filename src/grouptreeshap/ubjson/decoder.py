@@ -15,15 +15,29 @@ JSONLike = None | bool | int | float | str | list["JSONLike"] | dict[str, "JSONL
 
 
 class UBJSONDecodeError(Exception):
+    """Raised when UBJSON input is malformed or cannot be decoded."""
+
     pass
 
 
 class UBJSONUnsupportedError(UBJSONDecodeError):
+    """Raised when the decoder encounters a valid but unsupported UBJSON feature."""
+
     pass
 
 
 class UBJSONDecoder:
-    def __init__(self, ubj):
+    """
+    Decode UBJSON data into a Python object.
+    """
+
+    def __init__(self, ubj: bytes | BytesIO):
+        """
+        Parameters
+        ----------
+        ubj : bytes or BytesIO
+            UBJSON-encoded input data.
+        """
         if not isinstance(ubj, BytesIO):
             self.ubj = BytesIO(ubj)
         else:
@@ -34,6 +48,26 @@ class UBJSONDecoder:
 
 
 def decode(ubj: BytesIO) -> JSONLike:
+    """
+    Decode a UBJSON stream into a Python object.
+
+    Parameters
+    ----------
+    ubj : BytesIO
+        Stream containing UBJSON-encoded data.
+
+    Returns
+    -------
+    JSONLike
+        Decoded value represented as standard Python scalar, list, or dict.
+
+    Raises
+    ------
+    UBJSONDecodeError
+        If the stream is malformed or contains unexpected trailing data.
+    UBJSONUnsupportedError
+        If the stream uses an unsupported UBJSON construct.
+    """
     marker = get_next_marker(ubj)
     result = read_element(ubj, marker)
 

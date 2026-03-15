@@ -31,6 +31,9 @@ setup(
             "scikit-learn>=1.5",
             "xgboost>=3",
             "pandas>=2",
+            "ucimlrepo",
+            "plotly",
+            "kaleido",
         ],
         "test": [
             "pytest",

@@ -14,7 +14,7 @@ This package includes a C++ extension built with [pybind11](https://pybind11.rea
 
 ## Usage
 
-From a `model` instance of an XGBoost `Booster` or `XGBRegressor` object:
+From an XGBoost `model` instance:
 ```python
 from grouptreeshap import GroupedTreeExplainer
 
@@ -25,16 +25,22 @@ Here `feature_reprs` is an optional *membership vector* associating each feature
 
 If `feature_reprs = range(len(X))`, then all features are in their own distinct group and the Shap values are the same as the ones calculated by XGBoost.
 
-## Currently Supported models
+## Currently Supported Models
 
-- XGBoost regression models, specifically [`Booster`](xgboost) and [`XGBRegressor`](https://xgboost.readthedocs.io/en/latest/python/python_api.html#xgboost.XGBRegressor) instances.
 - Models represented as `grouptreeshap.TreeEnsemble` instances.
+- XGBoost regression and single-target classification models, specifically [`Booster`](xgboost), [`XGBRegressor`](https://xgboost.readthedocs.io/en/latest/python/python_api.html#xgboost.XGBRegressor), and [`XGBClassifier`](https://xgboost.readthedocs.io/en/latest/python/python_api.html#xgboost.XGBClassifier) instances. Categorical data is supported.
+
+## Comparison to Summing Shap Values by Group
+
+Summing feature-level Shap values by group is not equivalent to calculating groupShap values. [Here is an example](analyses/credit-card-default-example.ipynb) of differences between groupShap and sum-of-Shap for explaining a credit default prediction for a particular individual:
+
+[![](analyses/groupShap%20comparison.png)](analyses/credit-card-default-example.ipynb)
 
 ## Testing and Validation
 
 The implementation has been validated via:
-- examples where groupShap values have been calculated exactly by hand, and
-- check of exact equality with XGBoost's Shap value calculation, when each feature is in its own group.
+- Examples where groupShap values have been calculated exactly by hand.
+- Checks of exact equality with XGBoost's Shap value calculation, when each feature is in its own group.
 
 ## References
 

@@ -9,10 +9,36 @@ from grouptreeshap.tree import Tree
 
 @dataclass
 class TreeEnsemble:
+    """
+    Collection of decision trees used for TreeSHAP computation.
+
+    Attributes
+    ----------
+    trees : list[Tree]
+        List of tree objects representing the ensemble.
+    """
+
     trees: list[Tree]
 
     @classmethod
     def from_xgboost(cls, booster) -> "TreeEnsemble":
+        """
+        Construct a `TreeEnsemble` from an XGBoost regression model.
+
+        The method reads the internal UBJSON representation of the
+        booster and converts each tree into the `Tree` structure used
+        by GroupTreeShap.
+
+        Parameters
+        ----------
+        booster : xgboost.Booster, xgboost.XGBRegressor, or xgboost.XGBClassifier
+            Trained single-target XGBoost model.
+
+        Returns
+        -------
+        TreeEnsemble
+            Ensemble containing all trees extracted from the booster.
+        """
         raw = booster.save_raw(raw_format="ubj")
         with io.BytesIO(raw) as fd:
             jmodel = UBJSONDecoder(fd).decode()
