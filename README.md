@@ -7,12 +7,10 @@ Efficiently compute grouped (aka coalitions of) Shapley values ([Jullum et al., 
 ## Installation
 
 Install from PyPI:
-
 ```sh
 pip install grouptreeshap
 ```
-
-This package includes a C++ extension built with [pybind11](https://pybind11.readthedocs.io/en/stable/). When installing from source, a working C++ compiler is required. 
+This package includes a C++ extension built with [pybind11](https://pybind11.readthedocs.io/en/stable/). See 
 
 ## Usage
 
@@ -26,6 +24,17 @@ phi = explainer.shap_values(X, feature_reprs)  # Grouped Shap values
 Here `feature_reprs` is an optional *membership vector* associating each feature `i` to a group representative `feature_reprs[i]`. The Shap value of the group containing feature `i` is `phi[feature_reprs[i]]`.
 
 If `feature_reprs = range(len(X))`, then all features are in their own distinct group and the Shap values are the same as the ones calculated by XGBoost.
+
+## Currently Supported models
+
+- XGBoost regression models, specifically [`Booster`](xgboost) and [`XGBRegressor`](https://xgboost.readthedocs.io/en/latest/python/python_api.html#xgboost.XGBRegressor) instances.
+- Models represented as `grouptreeshap.TreeEnsemble` instances.
+
+## Testing and Validation
+
+The implementation has been validated via:
+- examples where groupShap values have been calculated exactly by hand, and
+- check of exact equality with XGBoost's Shap value calculation, when each feature is in its own group.
 
 ## References
 
