@@ -10,7 +10,7 @@ Install from PyPI:
 ```sh
 pip install grouptreeshap
 ```
-This package includes a C++ extension built with [pybind11](https://pybind11.readthedocs.io/en/stable/). See 
+This package includes a C++ extension built with [pybind11](https://pybind11.readthedocs.io/en/stable/). 
 
 ## Usage
 
